@@ -11,7 +11,8 @@
     "db:migrate": "pnpm --filter api db:migrate",
     "db:migrate:dev": "pnpm --filter api db:migrate:dev",
     "db:generate": "pnpm --filter api db:generate",
-    "seed:admin": "pnpm --filter api seed:admin"
+    "seed:admin": "pnpm --filter api seed:admin",
+    "seed:test-plants": "tsx scripts/seed-test-plants.ts"
   },
   "devDependencies": {
     "@types/node": "^20.11.5",
@@ -21,6 +22,7 @@
     "eslint": "^8.56.0",
     "prettier": "^3.2.4",
     "prisma": "5.22.0",
+    "tsx": "^4.7.0",
     "typescript": "^5.3.3"
   },
   "engines": {
