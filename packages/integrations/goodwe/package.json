@@ -7,6 +7,9 @@
   "scripts": {
     "lint": "eslint src --ext .ts"
   },
+  "dependencies": {
+    "@solarinvest/integrations-core": "workspace:*"
+  },
   "devDependencies": {
     "@types/node": "^20.11.5",
     "typescript": "^5.3.3"
