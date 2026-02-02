@@ -98,9 +98,35 @@ Copy the example environment file and configure as needed:
 cp .env.example .env
 ```
 
-For local development, the default values should work with the Docker services.
+For local development, update the DATABASE_URL:
 
-### 4. Run Development Servers
+```
+DATABASE_URL=postgresql://solarinvest:solarinvest_dev@localhost:5432/solarinvest_monitor
+```
+
+### 4. Setup Database
+
+Run migrations to create database schema:
+
+```bash
+pnpm db:migrate
+```
+
+Generate Prisma client:
+
+```bash
+pnpm db:generate
+```
+
+Create the admin user:
+
+```bash
+pnpm seed:admin
+```
+
+**Important:** Save the generated password displayed in the console. It will only be shown once.
+
+### 5. Run Development Servers
 
 Start all services concurrently (web, api, and worker):
 
@@ -121,11 +147,12 @@ pnpm --filter api dev
 pnpm --filter worker dev
 ```
 
-### 5. Verify Installation
+### 6. Verify Installation
 
 - Web app: http://localhost:3000
 - API health: http://localhost:3001/health
 - Mailhog UI: http://localhost:8025
+- Database: PostgreSQL on localhost:5432
 
 ---
 
@@ -152,9 +179,14 @@ pnpm --filter worker dev
 
 ## 📜 Available Scripts
 
+### Development
 - `pnpm dev` - Start all services in development mode
 - `pnpm build` - Build all applications
 - `pnpm lint` - Lint all applications
 - `pnpm test` - Run tests (to be implemented)
-- `pnpm db:migrate` - Run database migrations (to be implemented)
-- `pnpm seed:admin` - Seed admin user (to be implemented)
+
+### Database
+- `pnpm db:migrate` - Run database migrations (production)
+- `pnpm db:migrate:dev` - Create and apply new migration (development)
+- `pnpm db:generate` - Generate Prisma client
+- `pnpm seed:admin` - Create initial admin user
