@@ -11,6 +11,10 @@ import { backfillMetrics, checkLowGeneration, checkOffline } from './monitoring-
 
 const prisma = new PrismaClient();
 
+// ============================================================================
+// ADAPTER FACTORY
+// ============================================================================
+
 function getAdapter(brand: Brand): VendorAdapter {
   switch (brand) {
     case 'SOLIS':
@@ -25,8 +29,9 @@ function getAdapter(brand: Brand): VendorAdapter {
       throw new Error(`Unknown brand: ${brand}`);
   }
 }
+
 // ============================================================================
-// ADAPTER FACTORY
+// POLL WORKER
 // ============================================================================
 
 export async function createPollWorker(
