@@ -1,0 +1,394 @@
+Solarinvest Monitor — Codex Spec (MVP) [FINAL]
+Versão: 0.2 (Final)
+Data: 2026-02-01
+Repo: git@github.com:LeandroFrancaUS/Solarinvest-Monitor.git
+Domínio (prod): monitor.solarinvest.info
+Local dev: http://localhost:3000 (web) + http://localhost:4000 (api)
+
+0) Objetivo (MVP) — O que construir
+
+Construir uma plataforma unificada de monitoramento centralizado para a SolarInvest com:
+- KPIs por usina para múltiplas marcas (Huawei, Solis, GoodWe, “Dele”).
+- Alertas automáticos (email + push) com deduplicação e estados.
+- UI de operador com mapa e estados de saúde (verde/amarelo/vermelho).
+
+Não-objetivos (fora do MVP)
+- Portal do cliente, comandos remotos e billing (fases futuras).
+
+Escopo funcional mínimo por usina
+- today_energy_kwh (obrigatório)
+- current_power_w (se disponível)
+- total_energy_kwh (se disponível)
+- grid_injection_power_w (se disponível; senão “N/A”)
+- last_seen_at (última telemetria)
+- health_status (GREEN/YELLOW/RED e opcional GREY)
+
+Nota sobre GREY (recomendado)
+- Usado quando a integração está pausada por AUTH_FAILED, pendente de docs, ou desabilitada.
+
+========================================================================
+
+1) Arquitetura (monorepo, desacoplamento e execução determinística)
+
+1.1 Serviços
+A) Web App (Next.js + TypeScript)
+- Operator dashboard, maps, plants list, alerts, settings.
+
+B) API Server (NestJS ou Fastify + TypeScript)
+- Auth, CRUD plantas, credenciais, métricas, alertas, push subscriptions.
+
+C) Worker / Scheduler (Node separado)
+- Poll vendor APIs, normaliza dados, calcula saúde, dispara notificações.
+
+D) Data Stores
+- PostgreSQL
+- Redis (BullMQ, cache, locks)
+
+1.2 Regras arquiteturais obrigatórias (anti-acoplamento)
+- Frontend e Alert Engine nunca falam com APIs de fabricantes: somente com a API SolarInvest.
+- Toda integração fica em packages/integrations/<brand> e implementa o contrato VendorAdapter.
+
+1.3 Stack sugerida (MVP)
+- Next.js 14+ App Router, Tailwind
+- Prisma ORM
+- BullMQ + ioredis
+- Email: nodemailer + MJML
+- Mapas: Leaflet + OpenStreetMap (clustering obrigatório)
+- Push: MVP com Web Push (PWA) + VAPID
+
+========================================================================
+
+2) Regras determinísticas de execução (para o Codex não “inventar”)
+
+2.1 Locks e concorrência (evitar duplicidade e ban de API)
+- Lock por planta: lock:plant:{plantId} no Redis
+  - TTL = 2x intervalo de polling recomendado (por marca)
+- JobId determinístico no BullMQ:
+  - poll:plant:{plantId}:latest
+  - alarms:plant:{plantId}:latest
+  - daily:plant:{plantId}:{YYYY-MM-DD}
+
+2.2 Rate limiting por marca (governança de fila)
+- Filas separadas por marca:
+  - queue:poll:solis, queue:poll:huawei, queue:poll:goodwe, queue:poll:dele
+- Worker deve respeitar VendorCapabilities.polling:
+  - recommendedMinIntervalSeconds
+  - maxConcurrentRequests
+  - maxRequestsPerMinute
+
+2.3 Timeout e retries padronizados (contrato operacional)
+- Timeout padrão por request: 8s
+- Retries: 2 tentativas com backoff exponencial (ex.: 1s, 3s)
+- 429: aplicar backoff e respeitar retryAfterSeconds quando existir
+
+========================================================================
+
+3) Autenticação e Acesso (MVP)
+
+- Apenas 1 usuário inicial: brsolarinvest@gmail.com
+- Seed/admin script cria usuário com senha temporária aleatória
+- No primeiro login: troca de senha obrigatória (must_change_password)
+- Política de senha: mínimo 12 caracteres
+- Hash: bcrypt com cost >= 12
+- Rate limiting no login e proteção contra brute force
+
+========================================================================
+
+4) Modelo de Dados (Prisma sketch — atualizado)
+
+Objetivo do modelo
+- Contrato entre API, Worker e UI
+- Suportar dedupe de alertas, logs de polling, snapshots diários e credenciais criptografadas
+
+4.1 User
+- id (uuid)
+- email (unique)
+- password_hash
+- role: ADMIN | OPERATOR
+- must_change_password (bool)
+- created_at, updated_at
+
+4.2 Plant (atualizado)
+- id (uuid)
+- name
+- brand: HUAWEI | SOLIS | GOODWE | DELE
+- uf (2 chars)
+- city
+- address (optional)
+- lat, lng (optional; recomendado p/ mapa e sunrise/sunset)
+- timezone (não assumir America/Sao_Paulo; ideal geo-tz via lat/lng)
+- status: GREEN | YELLOW | RED | GREY
+- last_seen_at (timestamp)
+- installed_capacity_w (numeric, optional)
+- installed_capacity_verified (bool default false)
+- integration_status: ACTIVE | PAUSED_AUTH_ERROR | DISABLED_BY_OPERATOR | PENDING_DOCS
+- alerts_silenced_until (timestamp optional)
+- created_at, updated_at
+
+4.3 IntegrationCredential
+- id (uuid)
+- plant_id (fk)
+- brand
+- data (jsonb) — criptografado at-rest (AES-256-GCM)
+- created_at, updated_at
+
+4.4 MetricSnapshot (daily)
+- id
+- plant_id
+- date (YYYY-MM-DD)
+- date_timezone (string)
+- today_energy_kwh (required)
+- peak_power_w (optional)
+- total_energy_kwh (optional)
+- source (brand)
+- source_sampled_at (timestamp)
+- raw (jsonb optional; sem segredos)
+- created_at
+
+4.5 TelemetryPoint (opcional no MVP)
+- id
+- plant_id
+- ts
+- current_power_w
+- grid_injection_power_w
+- raw (jsonb)
+
+4.6 Alert
+- id
+- plant_id
+- type: OFFLINE | LOW_GEN | FAULT | STRING | VOLTAGE | API_ERROR | COMMUNICATION
+- severity: YELLOW | RED
+- state: NEW | ACKED | RESOLVED
+- first_seen_at
+- last_seen_at
+- message
+- vendor_alarm_code (optional)
+- device_sn (optional)
+- created_at, updated_at
+
+4.7 PushSubscription
+- id
+- user_id
+- endpoint
+- p256dh
+- auth
+- user_agent
+- created_at
+
+4.8 PollLog (novo — obrigatório)
+- id
+- plant_id
+- ts
+- job_type: POLL | ALARMS | DAILY
+- status: SUCCESS | ERROR
+- duration_ms
+- adapter_error_type (optional)
+- http_status (optional)
+- message (optional)
+- raw_summary (jsonb optional; sem segredos)
+
+========================================================================
+
+5) Integrações (por marca) + Onboarding Flow
+
+5.1 Padrão universal
+- Toda integração deve implementar VendorAdapter (contracts.ts)
+- Mock mode via INTEGRATION_MOCK_MODE=true usando /fixtures/<brand>/*.json
+- Normalização obrigatória (unidades, timestamps, status)
+
+5.2 Status de integração (obrigatório)
+- ACTIVE: polling normal
+- PAUSED_AUTH_ERROR: pausado por credencial inválida
+- PENDING_DOCS: sem docs/credenciais disponíveis (ex.: Dele stub)
+- DISABLED_BY_OPERATOR: pausa manual (manutenção)
+
+5.3 Add Plant Wizard (UI)
+Step 1: Escolher marca
+Step 2: Metadados (name, UF, city, address opcional, lat/lng opcional, timezone)
+Step 3: Credenciais por marca
+Step 4: Test connection
+- Chamar backend /integrations/test com creds ainda não salvas
+- Retornar sample normalizado ou erro (ok:false)
+Step 5: Save
+- Persist plant + credenciais criptografadas
+- Agendar polling jobs
+
+5.4 Backend /integrations/test
+- Validar inputs
+- Chamar adapter.testConnection (não deve lançar)
+- Retornar TestConnectionResult
+
+========================================================================
+
+6) Alert Engine + Health Model (Green/Yellow/Red/Grey)
+
+6.1 Estados de alerta
+- NEW → ACKED → RESOLVED
+
+6.2 Deduplicação (anti-spam)
+Chave de dedupe para alertas ativos:
+- (plant_id, type, vendor_alarm_code?, device_sn?)
+Regras:
+- Se alerta ativo já existe: atualizar last_seen_at e não notificar novamente
+- Reminders: permitido a cada X horas (default 6h) enquanto ativo
+
+6.3 Regras de OFFLINE
+- YELLOW: last_seen_at > 2h (config)
+- RED: last_seen_at > 24h ou N polls consecutivos falhos (default N=6)
+
+6.4 Regras de LOW_GEN (determinísticas)
+Durante janela de luz:
+- median7 = mediana(today_energy_kwh) dos últimos 7 dias com dados válidos
+- YELLOW se today < 0.30 * median7
+- RED se today < 0.10 * median7 por > 2h dentro da janela
+Fallback (usina nova sem histórico):
+- zero geração por 2h na janela → YELLOW; persistindo → RED
+
+6.5 Janela de luz (timezone e buffers)
+- sunrise/sunset via biblioteca solar
+- daylight_start = sunrise + 45min
+- daylight_end = sunset - 45min
+- timezone vem da planta (ideal geo-tz via lat/lng)
+
+6.6 API_ERROR / AUTH_FAILED / RATE_LIMIT
+- AUTH_FAILED: criar API_ERROR (RED) e setar integration_status=PAUSED_AUTH_ERROR
+- RATE_LIMIT_EXCEEDED: API_ERROR (YELLOW) + backoff
+- NETWORK_TIMEOUT persistente: API_ERROR (YELLOW) → RED após limiar
+
+6.7 Resolução automática
+- Se condição deixa de existir, marcar RESOLVED automaticamente
+
+6.8 Silenciamento (manutenção)
+- Plant.alerts_silenced_until
+- Se now < silenced_until: não enviar notificações, mas registrar alertas/estados
+
+6.9 Cálculo de health_status (MVP)
+GREEN:
+- last_seen_at ≤ 2h
+- sem alertas RED ativos
+- geração diária presente na janela de luz ou é noite
+YELLOW:
+- last_seen_at entre 2h e 24h
+- ou LOW_GEN YELLOW
+RED:
+- last_seen_at > 24h ou OFFLINE/FAULT crítico
+GREY:
+- integration_status != ACTIVE (PAUSED_AUTH_ERROR/PENDING_DOCS/DISABLED_BY_OPERATOR)
+
+========================================================================
+
+7) Scheduler/Polling (frequências + backfill)
+
+7.1 Frequências padrão (MVP)
+- summary (realtime): a cada 10 min (respeitar limites por marca)
+- alarms: a cada 15 min
+- daily snapshot: 23:50 no timezone da planta
+
+7.2 Smart Backfill (obrigatório)
+No job daily:
+- verificar lacunas D-3..D0 no DB
+- se faltando snapshots: chamar adapter.getDailyEnergySeries para preencher range
+
+7.3 Logs de polling (obrigatório)
+Cada job deve gravar PollLog:
+- duração, status, erro tipado (se houver)
+- nunca incluir segredos em raw_summary
+
+========================================================================
+
+8) Segurança (baseline + melhorias)
+
+8.1 Criptografia de credenciais
+- AES-256-GCM usando MASTER_KEY (32 bytes)
+- Nunca logar segredos (nem em vendorMeta, nem em raw, nem em logs)
+
+8.2 Rotação de chave (obrigatório)
+- MASTER_KEY_CURRENT e MASTER_KEY_PREVIOUS
+- decrypt tenta CURRENT; se falhar, tenta PREVIOUS
+- ao salvar, recriptografar com CURRENT
+- job admin: re-encrypt all credentials
+
+8.3 Proteções na API
+- Rate limiting por IP e por usuário (especialmente login)
+- CSRF se usar cookies
+- JWT curta duração + refresh opcional
+- Audit log para ações administrativas (alteração de credenciais, add/remove planta)
+
+========================================================================
+
+9) UI/UX (MVP) — regras determinísticas
+
+9.1 Lista de usinas
+- Search + filtros: brand, UF, city, status, last_seen_at
+- Filtros devem refletir em query params (URL state)
+
+9.2 Dashboard
+- Cards: total plants, green/yellow/red/grey counts, total today generation
+
+9.3 Plant detail
+- KPIs, chart 30 dias (daily series), alarms, poll logs (últimos 20)
+
+9.4 Mapa
+- Leaflet + OSM
+- Clustering obrigatório
+- Marker colors:
+  - GREEN: #22C55E
+  - YELLOW: #FACC15
+  - RED: #EF4444
+  - GREY: #9CA3AF
+
+========================================================================
+
+10) Local Dev, Mock e Testes
+
+10.1 docker-compose
+- postgres
+- redis
+- mailhog
+
+10.2 Mock Mode
+- INTEGRATION_MOCK_MODE=true
+- Adapters leem fixtures em /fixtures/<brand>/*.json
+
+10.3 Testes obrigatórios (checklist por adapter)
+- conversão unidades (W/kWh)
+- timezone correto (daily)
+- mapeamento de status operacional
+- mapeamento de erros HTTP→AdapterErrorType (401/403/429/5xx/timeout)
+- garantia de ausência de segredos em logs/vendorMeta/raw
+- testes do Alert Engine (OFFLINE/LOW_GEN/API_ERROR dedupe)
+
+10.4 E2E
+- Playwright para smoke tests UI
+- Vitest/Jest para backend/worker
+
+========================================================================
+
+11) Repo Structure + Deploy (MVP)
+
+11.1 Estrutura recomendada (monorepo)
+/apps/web
+/apps/api
+/apps/worker
+/packages/integrations
+  /core
+  /solis
+  /huawei
+  /goodwe
+  /dele (ou deye)
+/packages/ui
+/infra/docker-compose.yml
+/fixtures
+README.md
+
+11.2 Deploy
+- Web: Vercel (Next.js)
+- API + Worker: VPS com Docker (ou Render/Fly.io)
+- DNS: Cloudflare
+
+11.3 Secrets (env)
+- DATABASE_URL
+- REDIS_URL
+- MASTER_KEY_CURRENT, MASTER_KEY_PREVIOUS
+- EMAIL_SMTP_*
+- VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY
