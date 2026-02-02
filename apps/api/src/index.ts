@@ -5,11 +5,7 @@ import { config } from 'dotenv';
 config();
 
 const fastify = Fastify({
-  logger: {
-    transport: {
-      target: 'pino-pretty',
-    },
-  },
+  logger: true,
 });
 
 // Register CORS
