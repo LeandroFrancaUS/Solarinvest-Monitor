@@ -9,6 +9,8 @@
     "lint": "pnpm --filter \"./apps/*\" --filter \"./packages/*\" lint",
     "test": "pnpm --filter \"./apps/*\" --filter \"./packages/*\" test",
     "db:migrate": "pnpm --filter api db:migrate",
+    "db:migrate:dev": "pnpm --filter api db:migrate:dev",
+    "db:generate": "pnpm --filter api db:generate",
     "seed:admin": "pnpm --filter api seed:admin"
   },
   "devDependencies": {
@@ -18,10 +20,14 @@
     "concurrently": "^8.2.2",
     "eslint": "^8.56.0",
     "prettier": "^3.2.4",
+    "prisma": "5.22.0",
     "typescript": "^5.3.3"
   },
   "engines": {
     "node": ">=18.0.0",
     "pnpm": ">=8.0.0"
+  },
+  "dependencies": {
+    "@prisma/client": "5.22.0"
   }
 }
