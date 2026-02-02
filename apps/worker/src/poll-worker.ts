@@ -7,6 +7,7 @@ import { HuaweiAdapter } from '@solarinvest/integrations-huawei';
 import { GoodWeAdapter } from '@solarinvest/integrations-goodwe';
 import { DeleAdapter } from '@solarinvest/integrations-dele';
 import { PollJobData } from './types';
+import { backfillMetrics, checkLowGeneration, checkOffline } from './monitoring-utils';
 
 const prisma = new PrismaClient();
 
@@ -123,6 +124,15 @@ export async function createPollWorker(
 
           // Process alarms
           await processAlarms(plantId, adapter);
+
+          // Backfill missing metrics (D-3 to D-0)
+          await backfillMetrics(plantId, summary.timezone, adapter);
+
+          // Check for low generation
+          await checkLowGeneration(plantId);
+
+          // Check for offline condition
+          await checkOffline(plantId, summary.lastSeenAt);
 
           console.log(`[${brand}] Plant ${plantId} polled successfully`);
         } finally {
