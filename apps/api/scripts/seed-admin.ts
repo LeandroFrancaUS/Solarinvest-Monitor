@@ -10,7 +10,7 @@
  */
 
 import { PrismaClient } from '../node_modules/.prisma/client';
-import * as bcrypt from 'bcrypt';
+import * as bcryptjs from 'bcryptjs';
 import * as crypto from 'crypto';
 import { config } from 'dotenv';
 
@@ -64,9 +64,9 @@ async function main() {
     // Generate secure temporary password
     const temporaryPassword = generateSecurePassword();
     
-    // Hash password with bcrypt (cost >= 12)
-    console.log('🔐 Hashing password with bcrypt (cost: 12)...');
-    const passwordHash = await bcrypt.hash(temporaryPassword, BCRYPT_ROUNDS);
+    // Hash password with bcryptjs (cost >= 12)
+    console.log('🔐 Hashing password with bcryptjs (cost: 12)...');
+    const passwordHash = await bcryptjs.hash(temporaryPassword, BCRYPT_ROUNDS);
 
     // Create admin user
     console.log(`📝 Creating admin user: ${ADMIN_EMAIL}...`);
