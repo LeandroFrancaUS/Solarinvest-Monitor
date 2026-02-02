@@ -1,5 +1,3 @@
-PHASE_3A_SCOPE.txt
-==================
 
 Phase 3A Scope — Authentication, Encryption & Minimal API Wiring
 
