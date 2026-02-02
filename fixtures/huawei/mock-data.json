@@ -1,0 +1,18 @@
+{
+  "plant_summary": {
+    "currentPowerW": 5200,
+    "todayEnergyKWh": 33.2,
+    "totalEnergyKWh": 15234.6,
+    "gridInjectionPowerW": 5150,
+    "lastSeenAt": "2026-02-02T14:28:00Z",
+    "sourceSampledAt": "2026-02-02T14:27:50Z",
+    "timezone": "America/Sao_Paulo"
+  },
+  "daily_series": [
+    {"date": "2026-01-30", "energyKWh": 35.8},
+    {"date": "2026-01-31", "energyKWh": 32.4},
+    {"date": "2026-02-01", "energyKWh": 34.1},
+    {"date": "2026-02-02", "energyKWh": 33.2}
+  ],
+  "alarms": []
+}

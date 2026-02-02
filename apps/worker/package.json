@@ -1,0 +1,28 @@
+{
+  "name": "worker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.8.1",
+    "@solarinvest/integrations-core": "workspace:*",
+    "@solarinvest/integrations-solis": "workspace:*",
+    "@solarinvest/integrations-huawei": "workspace:*",
+    "@solarinvest/integrations-goodwe": "workspace:*",
+    "@solarinvest/integrations-dele": "workspace:*",
+    "bullmq": "^5.1.5",
+    "dotenv": "^16.4.1",
+    "ioredis": "^5.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "prisma": "^5.8.1",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

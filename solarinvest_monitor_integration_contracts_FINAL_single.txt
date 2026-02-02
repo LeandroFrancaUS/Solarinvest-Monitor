@@ -1,0 +1,317 @@
+Solarinvest Monitor — Integration Contracts (TypeScript) [FINAL]
+Versão: 0.3 (Final)
+Data: 2026-02-01
+
+Propósito
+- Definir contratos TypeScript usados pelo sistema para integrar múltiplas APIs de fabricantes.
+- Garantir shapes normalizados vendor-agnostic para UI e Alert Engine.
+- Padronizar erro, retry, rate limiting e governança de polling.
+
+Local recomendado
+- /packages/integrations/core/contracts.ts
+Fixtures
+- /fixtures/<brand>/*.json
+
+========================================================================
+
+1) Core Types (Contratos Normalizados)
+
+export type Brand = 'HUAWEI' | 'SOLIS' | 'GOODWE' | 'DELE';
+
+export type HealthStatus = 'GREEN' | 'YELLOW' | 'RED' | 'GREY';
+
+export type DeviceOperationalStatus =
+  | 'NORMAL'
+  | 'OFFLINE'
+  | 'FAULT'
+  | 'STANDBY'
+  | 'UNKNOWN';
+
+export type AlertType =
+  | 'OFFLINE'
+  | 'LOW_GEN'
+  | 'FAULT'
+  | 'STRING'
+  | 'VOLTAGE'
+  | 'API_ERROR'
+  | 'COMMUNICATION';
+
+export type AlertSeverity = 'YELLOW' | 'RED';
+
+========================================================================
+
+2) Erros padronizados do Adapter (regras operacionais)
+
+export type AdapterErrorType =
+  | 'NETWORK_TIMEOUT'
+  | 'RATE_LIMIT_EXCEEDED'
+  | 'AUTH_FAILED'
+  | 'INVALID_DATA_FORMAT'
+  | 'UNKNOWN';
+
+export interface VendorAdapterError extends Error {
+  type: AdapterErrorType;
+  retryAfterSeconds?: number;
+  httpStatus?: number;
+  originalError?: unknown;
+}
+
+Mapeamento obrigatório HTTP → AdapterErrorType
+- 401/403 → AUTH_FAILED
+- 429 → RATE_LIMIT_EXCEEDED (usar retryAfterSeconds quando existir)
+- 5xx/timeout → NETWORK_TIMEOUT
+- payload inesperado → INVALID_DATA_FORMAT
+
+========================================================================
+
+3) Capabilities + governança de polling
+
+export type AdapterCapability =
+  | 'PLANT_LIST'
+  | 'PLANT_SUMMARY'
+  | 'DAILY_ENERGY'
+  | 'REALTIME_POWER'
+  | 'GRID_INJECTION'
+  | 'ALARMS';
+
+export interface VendorCapabilities {
+  brand: Brand;
+  adapterVersion: string;
+  supports: AdapterCapability[];
+  polling: {
+    recommendedMinIntervalSeconds: number;
+    maxConcurrentRequests: number;
+    maxRequestsPerMinute?: number;
+    requestTimeoutSeconds?: number; // default 8
+  };
+  maxLookbackDaysForAlarms?: number;
+}
+
+========================================================================
+
+4) PlantRef + timezone
+
+export interface PlantRef {
+  plantId: string;      // internal UUID
+  brand: Brand;
+  vendorPlantId?: string;
+  timezone: string;     // ex: 'America/Sao_Paulo'
+  lat?: number;
+  lng?: number;
+  uf?: string;
+  city?: string;
+}
+
+========================================================================
+
+5) Credenciais (input do UI, armazenar criptografado)
+
+export interface BaseCredentialInput {
+  brand: Brand;
+  region?: string;
+}
+
+export interface SolisCredentialInput extends BaseCredentialInput {
+  brand: 'SOLIS';
+  apiId: string;
+  apiSecret: string;
+  stationId: string;
+}
+
+export interface HuaweiCredentialInput extends BaseCredentialInput {
+  brand: 'HUAWEI';
+  apiUser: string;
+  apiPassword: string;
+  stationCode: string;
+}
+
+export interface GoodweCredentialInput extends BaseCredentialInput {
+  brand: 'GOODWE';
+  apiKey?: string;
+  apiSecret?: string;
+  account?: string;
+  password?: string;
+  stationId: string;
+}
+
+export interface DeleCredentialInput extends BaseCredentialInput {
+  brand: 'DELE';
+  providerVariant: 'DEYE_CLOUD' | 'SOLARMAN_V5';
+  appId?: string;
+  appSecret?: string;
+  accessToken?: string;
+  plantCode: string;
+}
+
+export type CredentialInput =
+  | SolisCredentialInput
+  | HuaweiCredentialInput
+  | GoodweCredentialInput
+  | DeleCredentialInput;
+
+Regras
+- Jamais colocar segredos em logs, vendorMeta, raw.
+
+========================================================================
+
+6) Shapes normalizados (o que o sistema inteiro consome)
+
+export interface NormalizedPlantSummary {
+  brand: Brand;
+  vendorPlantId: string;
+
+  sampledAt: string;          // ISO: quando o adapter buscou
+  vendorTimestamp?: string;   // ISO: última telemetria, se houver
+
+  currentPowerW?: number;
+  todayEnergyKWh: number;     // REQUIRED
+  totalEnergyKWh?: number;
+  gridInjectionPowerW?: number;
+
+  installedCapacityW?: number;
+
+  lastSeenAt: string;         // ISO
+  operationalStatus: DeviceOperationalStatus;
+  isOnline: boolean;
+
+  notes?: string[];
+  vendorMeta?: Record<string, unknown>; // sem segredos
+}
+
+export interface NormalizedDailyEnergyPoint {
+  date: string;       // YYYY-MM-DD (no timezone da planta)
+  energyKWh: number;
+}
+
+export interface NormalizedDailySeries {
+  brand: Brand;
+  vendorPlantId: string;
+  sampledAt: string;
+  timezone: string;
+  points: NormalizedDailyEnergyPoint[];
+  vendorMeta?: Record<string, unknown>;
+}
+
+export interface NormalizedAlarm {
+  brand: Brand;
+  vendorPlantId: string;
+
+  vendorAlarmId?: string;
+  vendorAlarmCode?: string | number;
+  vendorAlarmName?: string;
+
+  type: AlertType;
+  severity: AlertSeverity;
+
+  occurredAt: string;
+  clearedAt?: string;
+  sampledAt: string;
+
+  message: string;
+  deviceSn?: string;
+
+  metrics?: {
+    voltageV?: number;
+    currentA?: number;
+    powerW?: number;
+    temperatureC?: number;
+  };
+
+  vendorMeta?: Record<string, unknown>;
+}
+
+========================================================================
+
+7) Range de datas com timezone (evita duplicidade)
+
+export interface DateRange {
+  startDate: string; // YYYY-MM-DD (no timezone da planta)
+  endDate: string;   // YYYY-MM-DD (no timezone da planta)
+  timezone: string;  // obrigatório
+}
+
+========================================================================
+
+8) Contexto do Adapter + Interface obrigatória
+
+export interface AdapterContext {
+  logger: {
+    info: (msg: string, meta?: Record<string, unknown>) => void;
+    warn: (msg: string, meta?: Record<string, unknown>) => void;
+    error: (msg: string, meta?: Record<string, unknown>) => void;
+  };
+  http: {
+    get: <T>(url: string, opts?: any) => Promise<T>;
+    post: <T>(url: string, body?: any, opts?: any) => Promise<T>;
+  };
+  now: () => Date;
+}
+
+export interface TestConnectionResult {
+  ok: boolean;
+  brand: Brand;
+  vendorPlantId?: string;
+  message?: string;
+  sample?: Partial<NormalizedPlantSummary>;
+  debug?: Record<string, unknown>;
+}
+
+export interface VendorAdapter {
+  brand: Brand;
+
+  capabilities(): VendorCapabilities;
+
+  // MUST NOT throw; always returns ok:false on failure
+  testConnection(ctx: AdapterContext, creds: CredentialInput): Promise<TestConnectionResult>;
+
+  // Throws VendorAdapterError on failure
+  getPlantSummary(ctx: AdapterContext, plant: PlantRef, creds: CredentialInput): Promise<NormalizedPlantSummary>;
+
+  getDailyEnergySeries(
+    ctx: AdapterContext,
+    plant: PlantRef,
+    creds: CredentialInput,
+    range: DateRange
+  ): Promise<NormalizedDailySeries>;
+
+  getAlarmsSince(
+    ctx: AdapterContext,
+    plant: PlantRef,
+    creds: CredentialInput,
+    sinceIso: string
+  ): Promise<NormalizedAlarm[]>;
+}
+
+export type AdapterRegistry = Record<Brand, VendorAdapter>;
+
+========================================================================
+
+9) Regras de normalização (obrigatórias) + Fixtures
+
+Regras
+1) Unidades:
+- Power → Watts (W)
+- Energy → kWh
+
+2) sampledAt:
+- sempre ctx.now().toISOString()
+
+3) lastSeenAt:
+- preferir vendorTimestamp
+- fallback: sampledAt apenas se vendor indica online
+
+4) Status:
+- mapear state/codes do vendor para DeviceOperationalStatus
+- isOnline = operationalStatus !== 'OFFLINE' && operationalStatus !== 'UNKNOWN'
+
+5) installedCapacityW:
+- preencher apenas se vendor fornece
+- não estimar
+
+6) vendorMeta:
+- apenas debug útil, nunca segredos
+
+Fixtures
+- /fixtures/<brand>/*.json
+- Usar em INTEGRATION_MOCK_MODE=true
+- Unit tests devem validar normalização e regras acima
