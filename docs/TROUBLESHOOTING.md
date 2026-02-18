@@ -79,7 +79,7 @@ Complete debugging guide for Phase 3B worker and polling system.
 
 **Symptom**: Plant never polls again until TTL expires (20 minutes)
 
-**Fix**: 
+**Fix** (⚠️ DEV ONLY): 
 ```bash
 redis-cli DEL "lock:plant:PLANT_ID"
 ```
@@ -238,7 +238,9 @@ const existingAlert = await prisma.alert.findFirst({
 
 **Code Location**: `apps/worker/src/poll-worker.ts:240-250`
 
-## Useful Debugging Commands
+## Useful Debugging Commands (⚠️ DEV ONLY)
+
+**WARNING**: These commands are for development and troubleshooting only. Never use in production without understanding the impact.
 
 ### Check Active Locks
 ```bash
