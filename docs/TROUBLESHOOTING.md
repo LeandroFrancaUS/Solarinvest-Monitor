@@ -20,7 +20,7 @@ Complete debugging guide for Phase 3B worker and polling system.
 ```
 1. Check Redis locks: redis-cli KEYS "lock:plant:*"
    - Stale locks block polling (TTL: 1200s)
-   - Manual removal: redis-cli DEL "lock:plant:PLANT_ID"
+   - Manual removal (⚠️ DEV ONLY): redis-cli DEL "lock:plant:PLANT_ID"
 2. Check PollLog table for errors:
    psql> SELECT * FROM poll_logs ORDER BY created_at DESC LIMIT 10;
 3. Check adapter_error_type column for error classification
