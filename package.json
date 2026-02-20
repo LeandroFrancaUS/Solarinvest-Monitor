@@ -1,0 +1,15 @@
+{
+  "name": "solarinvest-monitor",
+  "private": true,
+  "version": "0.1.0",
+  "engines": { "node": ">=18", "pnpm": ">=8" },
+  "scripts": {
+    "dev": "pnpm -r run dev",
+    "build": "pnpm -r run build",
+    "typecheck": "pnpm -r run typecheck",
+    "lint": "pnpm -r run lint"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}
