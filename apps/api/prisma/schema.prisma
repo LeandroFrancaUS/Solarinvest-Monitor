@@ -38,5 +38,5 @@ model Alert {
   severity  String
   resolved  Boolean  @default(false)
   createdAt DateTime @default(now())
-  plant     Plant    @relation(fields: [plantId], references: [id])
+  plant     Plant    @relation(fields: [plantId], references: [id], onDelete: Cascade)
 }
