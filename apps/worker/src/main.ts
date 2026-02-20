@@ -9,7 +9,7 @@ const pollingWorker = new Worker(
   'polling',
   async (job) => {
     console.log(`Processing job ${job.id} of type ${job.name}`)
-    // TODO: implement inverter polling
+    // TODO: implement vendor API polling with rate limiting and error handling
   },
   { connection }
 )
