@@ -63,6 +63,9 @@ Estes arquivos são a **fonte da verdade técnica**:
 
 ## 🚀 Desenvolvimento Local
 
+```bash
+pnpm install
+pnpm dev
 ### Prerequisites
 
 - Node.js >= 18.0.0

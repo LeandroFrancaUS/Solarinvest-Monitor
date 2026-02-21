@@ -4,6 +4,13 @@ node_modules/
 
 # Build outputs
 dist/
+.next/
+out/
+
+# Prisma generated
+**/node_modules/.prisma/
+
+# Environment
 build/
 .next/
 out/
@@ -13,6 +20,10 @@ out/
 .env.local
 .env.*.local
 
+# Misc
+.DS_Store
+*.log
+*.tsbuildinfo
 # IDE
 .vscode/
 .idea/

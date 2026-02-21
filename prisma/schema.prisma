@@ -1,3 +1,8 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
 // Solarinvest Monitor - Prisma Schema
 // MVP Data Model following SPEC_MVP.md and MOBILE.md
 
@@ -11,6 +16,35 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Plant {
+  id           String   @id @default(cuid())
+  name         String
+  location     String?
+  latitude     Float?
+  longitude    Float?
+  manufacturer String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  alerts       Alert[]
+}
+
+model Alert {
+  id        String   @id @default(cuid())
+  plantId   String
+  type      String
+  message   String
+  severity  String
+  resolved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  plant     Plant    @relation(fields: [plantId], references: [id], onDelete: Cascade)
 // ============================================================================
 // USER MANAGEMENT
 // ============================================================================
