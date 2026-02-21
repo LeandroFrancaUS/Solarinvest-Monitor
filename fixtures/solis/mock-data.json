@@ -1,0 +1,27 @@
+{
+  "plant_summary": {
+    "currentPowerW": 4500,
+    "todayEnergyKWh": 28.5,
+    "totalEnergyKWh": 12543.8,
+    "gridInjectionPowerW": 4450,
+    "lastSeenAt": "2026-02-02T14:30:00Z",
+    "sourceSampledAt": "2026-02-02T14:29:45Z",
+    "timezone": "America/Sao_Paulo"
+  },
+  "daily_series": [
+    {"date": "2026-01-30", "energyKWh": 32.1},
+    {"date": "2026-01-31", "energyKWh": 29.7},
+    {"date": "2026-02-01", "energyKWh": 31.5},
+    {"date": "2026-02-02", "energyKWh": 28.5}
+  ],
+  "alarms": [
+    {
+      "vendorAlarmCode": "SOLIS_GRID_FAULT_001",
+      "deviceSn": "SOL-INV-2024-001",
+      "message": "Grid voltage out of range",
+      "occurredAt": "2026-02-01T10:15:30Z",
+      "isActive": false,
+      "severity": "MEDIUM"
+    }
+  ]
+}

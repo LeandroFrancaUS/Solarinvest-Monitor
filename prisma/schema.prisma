@@ -3,6 +3,12 @@
 
 generator client {
   provider = "prisma-client-js"
+// Solarinvest Monitor - Prisma Schema
+// MVP Data Model following SPEC_MVP.md and MOBILE.md
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../apps/api/node_modules/.prisma/client"
 }
 
 datasource db {
@@ -39,4 +45,254 @@ model Alert {
   resolved  Boolean  @default(false)
   createdAt DateTime @default(now())
   plant     Plant    @relation(fields: [plantId], references: [id], onDelete: Cascade)
+// ============================================================================
+// USER MANAGEMENT
+// ============================================================================
+
+enum Role {
+  ADMIN
+  OPERATOR
+  CUSTOMER
+}
+
+model User {
+  id                   String               @id @default(cuid())
+  email                String               @unique
+  role                 Role                 @default(OPERATOR)
+  password_hash        String
+  must_change_password Boolean              @default(false)
+  created_at           DateTime             @default(now())
+  updated_at           DateTime             @updatedAt
+  device_registrations DeviceRegistration[]
+
+  @@map("users")
+}
+
+// ============================================================================
+// PLANT MANAGEMENT
+// ============================================================================
+
+enum PlantStatus {
+  GREEN
+  YELLOW
+  RED
+  GREY
+}
+
+enum IntegrationStatus {
+  ACTIVE
+  PAUSED_AUTH_ERROR
+  DISABLED_BY_OPERATOR
+  PENDING_DOCS
+}
+
+enum Brand {
+  HUAWEI
+  SOLIS
+  GOODWE
+  DELE
+}
+
+model Plant {
+  id                          String              @id @default(cuid())
+  name                        String
+  external_reference          String?
+  brand                       Brand
+  status                      PlantStatus         @default(GREY)
+  integration_status          IntegrationStatus   @default(PENDING_DOCS)
+  // Location
+  uf                          String?
+  city                        String?
+  lat                         Float?
+  lng                         Float?
+  timezone                    String              // Required: e.g., "America/Sao_Paulo"
+  // Capacity
+  installed_capacity_w        Float?
+  installed_capacity_verified Boolean             @default(false)
+  // Operations
+  alerts_silenced_until       DateTime?
+  owner_customer_id           String?             // Nullable for MVP, required when mobile launches
+  // Timestamps
+  created_at                  DateTime            @default(now())
+  updated_at                  DateTime            @updatedAt
+  // Relations
+  integration_credentials     IntegrationCredential[]
+  metric_snapshots            MetricSnapshot[]
+  alerts                      Alert[]
+  poll_logs                   PollLog[]
+
+  @@index([status])
+  @@index([brand])
+  @@index([integration_status])
+  @@index([owner_customer_id])
+  @@map("plants")
+}
+
+// ============================================================================
+// INTEGRATION CREDENTIALS
+// ============================================================================
+
+model IntegrationCredential {
+  id             String   @id @default(cuid())
+  plant_id       String
+  brand          Brand
+  encrypted_data String   // Placeholder for encrypted credentials (JSON string)
+  key_version    String   @default("1") // For key rotation tracking
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+  // Relations
+  plant          Plant    @relation(fields: [plant_id], references: [id], onDelete: Cascade)
+
+  @@unique([plant_id, brand])
+  @@map("integration_credentials")
+}
+
+// ============================================================================
+// METRICS & TELEMETRY
+// ============================================================================
+
+model MetricSnapshot {
+  id                     String   @id @default(cuid())
+  plant_id               String
+  date                   DateTime @db.Date // Store as date type for plant's timezone
+  timezone               String
+  // Energy metrics
+  today_energy_kwh       Float    // Required field
+  current_power_w        Float?
+  grid_injection_power_w Float?
+  total_energy_kwh       Float?
+  // Metadata
+  last_seen_at           DateTime // Required
+  source_sampled_at      DateTime // Required
+  created_at             DateTime @default(now())
+  updated_at             DateTime @updatedAt
+  // Relations
+  plant                  Plant    @relation(fields: [plant_id], references: [id], onDelete: Cascade)
+
+  @@unique([plant_id, date])
+  @@index([date])
+  @@index([plant_id, date])
+  @@map("metric_snapshots")
+}
+
+// ============================================================================
+// ALERTS
+// ============================================================================
+
+enum AlertType {
+  OFFLINE
+  LOW_GEN
+  FAULT
+  STRING
+  VOLTAGE
+  API_ERROR
+}
+
+enum AlertSeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  INFO
+}
+
+enum AlertState {
+  NEW
+  ACKED
+  RESOLVED
+}
+
+model Alert {
+  id                  String        @id @default(cuid())
+  plant_id            String
+  type                AlertType
+  severity            AlertSeverity
+  state               AlertState    @default(NEW)
+  // Deduplication fields
+  vendor_alarm_code   String?
+  device_sn           String?
+  // Content
+  message             String
+  // Timestamps
+  occurred_at         DateTime
+  cleared_at          DateTime?
+  last_notified_at    DateTime?
+  created_at          DateTime      @default(now())
+  updated_at          DateTime      @updatedAt
+  // Relations
+  plant               Plant         @relation(fields: [plant_id], references: [id], onDelete: Cascade)
+
+  @@index([plant_id, state])
+  @@index([plant_id, type, vendor_alarm_code, device_sn, state])
+  @@map("alerts")
+}
+
+// ============================================================================
+// POLLING LOGS (Mandatory for all jobs)
+// ============================================================================
+
+enum PollJobType {
+  POLL
+  ALARMS
+  DAILY
+}
+
+enum PollStatus {
+  SUCCESS
+  ERROR
+}
+
+model PollLog {
+  id                 String       @id @default(cuid())
+  plant_id           String
+  job_type           PollJobType
+  status             PollStatus
+  duration_ms        Int
+  adapter_error_type String?
+  http_status        Int?
+  safe_summary_json  String?      @db.Text // MUST NOT contain secrets
+  started_at         DateTime
+  finished_at        DateTime
+  created_at         DateTime     @default(now())
+  // Relations
+  plant              Plant        @relation(fields: [plant_id], references: [id], onDelete: Cascade)
+
+  @@index([plant_id, created_at])
+  @@index([job_type, status, created_at])
+  @@map("poll_logs")
+}
+
+// ============================================================================
+// DEVICE REGISTRATION (Mobile-ready)
+// ============================================================================
+
+enum DevicePlatform {
+  WEB
+  IOS
+  ANDROID
+}
+
+enum PushProvider {
+  WEBPUSH
+  FCM
+  APNS
+}
+
+model DeviceRegistration {
+  id                  String         @id @default(cuid())
+  user_id             String
+  platform            DevicePlatform
+  provider            PushProvider
+  push_token_encrypted String        // Placeholder for encrypted push token
+  device_info         String?        @db.Text
+  user_agent          String?
+  enabled             Boolean        @default(true)
+  created_at          DateTime       @default(now())
+  last_seen_at        DateTime       @default(now())
+  // Relations
+  user                User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, enabled])
+  @@index([platform, provider])
+  @@map("device_registrations")
 }

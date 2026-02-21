@@ -66,3 +66,130 @@ Estes arquivos são a **fonte da verdade técnica**:
 ```bash
 pnpm install
 pnpm dev
+### Prerequisites
+
+- Node.js >= 18.0.0
+- pnpm >= 8.0.0
+- Docker and Docker Compose
+
+### 1. Install Dependencies
+
+```bash
+pnpm install
+```
+
+### 2. Start Infrastructure Services
+
+Start PostgreSQL, Redis, and Mailhog using Docker Compose:
+
+```bash
+cd infra
+docker compose up -d
+```
+
+Verify services are running:
+
+```bash
+docker ps --filter "name=solarinvest"
+```
+
+### 3. Configure Environment
+
+Copy the example environment file and configure as needed:
+
+```bash
+cp .env.example .env
+```
+
+For local development, update the DATABASE_URL:
+
+```
+DATABASE_URL=postgresql://solarinvest:solarinvest_dev@localhost:5432/solarinvest_monitor
+```
+
+### 4. Setup Database
+
+Run migrations to create database schema:
+
+```bash
+pnpm db:migrate
+```
+
+Generate Prisma client:
+
+```bash
+pnpm db:generate
+```
+
+Create the admin user:
+
+```bash
+pnpm seed:admin
+```
+
+**Important:** Save the generated password displayed in the console. It will only be shown once.
+
+### 5. Run Development Servers
+
+Start all services concurrently (web, api, and worker):
+
+```bash
+pnpm dev
+```
+
+Or run services individually:
+
+```bash
+# Web app (http://localhost:3000)
+pnpm --filter web dev
+
+# API server (http://localhost:3001)
+pnpm --filter api dev
+
+# Worker process
+pnpm --filter worker dev
+```
+
+### 6. Verify Installation
+
+- Web app: http://localhost:3000
+- API health: http://localhost:3001/health
+- Mailhog UI: http://localhost:8025
+- Database: PostgreSQL on localhost:5432
+
+---
+
+## 📦 Project Structure
+
+```
+/apps
+  /web          # Next.js 14+ App Router + Tailwind
+  /api          # Fastify + TypeScript + Prisma
+  /worker       # Node + BullMQ + TypeScript
+/packages
+  /integrations
+    /core       # contracts.ts, health.ts, shared utils
+    /solis      # Solis adapter
+    /huawei     # Huawei adapter
+    /goodwe     # GoodWe adapter
+    /dele       # Dele adapter (stub)
+/fixtures       # mock payloads by brand
+/infra          # docker-compose.yml
+/prisma         # database schema
+```
+
+---
+
+## 📜 Available Scripts
+
+### Development
+- `pnpm dev` - Start all services in development mode
+- `pnpm build` - Build all applications
+- `pnpm lint` - Lint all applications
+- `pnpm test` - Run tests (to be implemented)
+
+### Database
+- `pnpm db:migrate` - Run database migrations (production)
+- `pnpm db:migrate:dev` - Create and apply new migration (development)
+- `pnpm db:generate` - Generate Prisma client
+- `pnpm seed:admin` - Create initial admin user

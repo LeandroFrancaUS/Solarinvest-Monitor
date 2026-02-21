@@ -11,5 +11,36 @@
   },
   "devDependencies": {
     "typescript": "^5.4.5"
+  "version": "0.1.0",
+  "private": true,
+  "description": "Unified solar plant monitoring platform for SolarInvest",
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter web dev\" \"pnpm --filter api dev\" \"pnpm --filter worker dev\"",
+    "build": "pnpm --filter web build && pnpm --filter api build && pnpm --filter worker build",
+    "lint": "pnpm --filter \"./apps/*\" --filter \"./packages/*\" lint",
+    "test": "pnpm --filter \"./apps/*\" --filter \"./packages/*\" test",
+    "db:migrate": "pnpm --filter api db:migrate",
+    "db:migrate:dev": "pnpm --filter api db:migrate:dev",
+    "db:generate": "pnpm --filter api db:generate",
+    "seed:admin": "pnpm --filter api seed:admin",
+    "seed:test-plants": "tsx scripts/seed-test-plants.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "concurrently": "^8.2.2",
+    "eslint": "^8.56.0",
+    "prettier": "^3.2.4",
+    "prisma": "5.22.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "dependencies": {
+    "@prisma/client": "5.22.0"
   }
 }

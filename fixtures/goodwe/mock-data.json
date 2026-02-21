@@ -1,0 +1,27 @@
+{
+  "plant_summary": {
+    "currentPowerW": 3800,
+    "todayEnergyKWh": 24.7,
+    "totalEnergyKWh": 9876.3,
+    "gridInjectionPowerW": 3750,
+    "lastSeenAt": "2026-02-02T14:25:00Z",
+    "sourceSampledAt": "2026-02-02T14:24:55Z",
+    "timezone": "America/Sao_Paulo"
+  },
+  "daily_series": [
+    {"date": "2026-01-30", "energyKWh": 27.3},
+    {"date": "2026-01-31", "energyKWh": 25.1},
+    {"date": "2026-02-01", "energyKWh": 26.8},
+    {"date": "2026-02-02", "energyKWh": 24.7}
+  ],
+  "alarms": [
+    {
+      "vendorAlarmCode": "GW_LOW_EFFICIENCY",
+      "deviceSn": "GW-INV-2023-005",
+      "message": "Inverter efficiency below threshold",
+      "occurredAt": "2026-02-02T09:00:00Z",
+      "isActive": true,
+      "severity": "LOW"
+    }
+  ]
+}
