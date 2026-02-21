@@ -42,10 +42,11 @@ pnpm --filter web dev       # http://localhost:3000
 pnpm --filter api dev       # http://localhost:3001
 pnpm --filter worker dev
 
-# Build / lint / test
+# Build / typecheck / lint
 pnpm build
+pnpm typecheck
 pnpm lint
-pnpm test
+# Note: pnpm test is defined but no tests are implemented yet (Phase 3B)
 ```
 
 ## Key Naming Conventions
@@ -72,6 +73,17 @@ RED:    last_seen_at > 24 h OR CRITICAL alert exists
 YELLOW: last_seen_at 2–24 h OR low generation (< 30% of 7-day median)
 GREEN:  last_seen_at ≤ 2 h, no RED alerts
 ```
+
+## Alert Types (Phase 3B — from `apps/worker/src/monitoring-utils.ts`)
+- `OFFLINE` — CRITICAL severity; created when `last_seen_at > 24 h`; auto-resolved when back online
+- `LOW_GENERATION` — HIGH severity when today < 30% of 7-day median; CRITICAL (< 10%); auto-resolved
+- `MOCK_FAULT` — maps to vendor alarms from fixture; dedupe key `(plant_id, type, vendor_alarm_code, device_sn)`
+
+## Worker Internals (Phase 3B)
+- Scheduler fires immediately on start, then every **10 min** (`pollingIntervalSeconds = 600`)
+- Jobs: `attempts: 2`, exponential backoff starting at 5 s; BullMQ worker concurrency: **5 per brand queue**
+- Alarm query window: **last 24 h** per poll; backfill checks **D-3 to D-0** for `MetricSnapshot` gaps
+- Restart worker to force immediate rescheduling (no manual queue commands needed)
 
 ## Canonical Docs (Source of Truth)
 - `SPEC_MVP.md` — business rules + core model constraints
