@@ -2,21 +2,11 @@
   "name": "solarinvest-monitor",
   "private": true,
   "version": "0.1.0",
-  "engines": { "node": ">=18", "pnpm": ">=8" },
-  "scripts": {
-    "dev": "pnpm -r run dev",
-    "build": "pnpm -r run build",
-    "typecheck": "pnpm -r run typecheck",
-    "lint": "pnpm -r run lint"
-  },
-  "devDependencies": {
-    "typescript": "^5.4.5"
-  "version": "0.1.0",
-  "private": true,
   "description": "Unified solar plant monitoring platform for SolarInvest",
   "scripts": {
     "dev": "concurrently \"pnpm --filter web dev\" \"pnpm --filter api dev\" \"pnpm --filter worker dev\"",
     "build": "pnpm --filter web build && pnpm --filter api build && pnpm --filter worker build",
+    "typecheck": "pnpm -r run typecheck",
     "lint": "pnpm --filter \"./apps/*\" --filter \"./packages/*\" lint",
     "test": "pnpm --filter \"./apps/*\" --filter \"./packages/*\" test",
     "db:migrate": "pnpm --filter api db:migrate",
