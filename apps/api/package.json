@@ -3,25 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "ts-node-dev --respawn src/main.ts",
-    "build": "tsc",
-    "start": "node dist/main.js",
-    "typecheck": "tsc --noEmit",
-    "prisma": "prisma"
-  },
-  "dependencies": {
-    "@prisma/client": "^5.16.1",
-    "fastify": "^5.7.2"
-  },
-  "devDependencies": {
-    "@types/node": "^20.14.10",
-    "prisma": "^5.16.1",
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^5.4.5"
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
+    "prisma": "prisma",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:migrate:dev": "tsx scripts/migrate-dev.ts",
     "db:generate": "tsx scripts/generate.ts",
