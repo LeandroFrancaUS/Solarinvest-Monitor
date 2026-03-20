@@ -73,7 +73,7 @@ export async function createPollWorker(
           // Get plant from database
           const plant = await prisma.plant.findUnique({
             where: { id: plantId },
-            include: { integrationCredential: true },
+            include: { integration_credentials: true },
           });
 
           if (!plant) {
@@ -90,7 +90,7 @@ export async function createPollWorker(
 
           // Get plant summary
           const summary = await adapter.getPlantSummary(
-            { vendorPlantId: plant.vendor_plant_id || plantId },
+            { vendorPlantId: plant.external_reference || plantId },
             { raw: {} } // Mock mode doesn't need real credentials
           );
 
@@ -255,7 +255,7 @@ async function processAlarms(plantId: string, adapter: VendorAdapter): Promise<v
       const existingAlert = await prisma.alert.findFirst({
         where: {
           plant_id: plantId,
-          type: 'MOCK_FAULT',
+          type: 'FAULT',
           vendor_alarm_code: alarm.vendorAlarmCode,
           device_sn: alarm.deviceSn,
           state: { in: ['NEW', 'ACKED'] },
@@ -263,24 +263,19 @@ async function processAlarms(plantId: string, adapter: VendorAdapter): Promise<v
       });
 
       if (existingAlert) {
-        // Update last_seen_at
-        await prisma.alert.update({
-          where: { id: existingAlert.id },
-          data: { last_seen_at: new Date() },
-        });
+        // Alert already exists, no update needed
       } else if (alarm.isActive) {
         // Create new alert
         await prisma.alert.create({
           data: {
             plant_id: plantId,
-            type: 'MOCK_FAULT',
+            type: 'FAULT',
             severity: alarm.severity,
             state: 'NEW',
             vendor_alarm_code: alarm.vendorAlarmCode,
             device_sn: alarm.deviceSn,
             message: alarm.message,
             occurred_at: alarm.occurredAt,
-            last_seen_at: new Date(),
           },
         });
         console.log(`Created alert for plant ${plantId}: ${alarm.message}`);
@@ -307,9 +302,9 @@ async function processAlarms(plantId: string, adapter: VendorAdapter): Promise<v
 // QUEUE CREATION
 // ============================================================================
 
-export function createQueue(brand: Brand, redisConnection: Redis): Queue<PollJobData> {
+export function createQueue(brand: Brand, redisConnection: Redis): Queue {
   const queueName = `queue:poll:${brand.toLowerCase()}`;
-  return new Queue<PollJobData>(queueName, {
+  return new Queue(queueName, {
     connection: redisConnection,
   });
 }

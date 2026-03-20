@@ -1,14 +1,9 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-generator client {
-  provider = "prisma-client-js"
 // Solarinvest Monitor - Prisma Schema
 // MVP Data Model following SPEC_MVP.md and MOBILE.md
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../apps/api/node_modules/.prisma/client"
+  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -16,35 +11,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Plant {
-  id           String   @id @default(cuid())
-  name         String
-  location     String?
-  latitude     Float?
-  longitude    Float?
-  manufacturer String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  alerts       Alert[]
-}
-
-model Alert {
-  id        String   @id @default(cuid())
-  plantId   String
-  type      String
-  message   String
-  severity  String
-  resolved  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  plant     Plant    @relation(fields: [plantId], references: [id], onDelete: Cascade)
 // ============================================================================
 // USER MANAGEMENT
 // ============================================================================
@@ -279,20 +245,21 @@ enum PushProvider {
 }
 
 model DeviceRegistration {
-  id                  String         @id @default(cuid())
-  user_id             String
-  platform            DevicePlatform
-  provider            PushProvider
-  push_token_encrypted String        // Placeholder for encrypted push token
-  device_info         String?        @db.Text
-  user_agent          String?
-  enabled             Boolean        @default(true)
-  created_at          DateTime       @default(now())
-  last_seen_at        DateTime       @default(now())
+  id                   String         @id @default(cuid())
+  user_id              String
+  platform             DevicePlatform
+  provider             PushProvider
+  push_token_encrypted String         // Placeholder for encrypted push token
+  device_info          String?        @db.Text
+  user_agent           String?
+  enabled              Boolean        @default(true)
+  created_at           DateTime       @default(now())
+  last_seen_at         DateTime       @default(now())
   // Relations
-  user                User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user                 User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([user_id, enabled])
   @@index([platform, provider])
   @@map("device_registrations")
 }
+
