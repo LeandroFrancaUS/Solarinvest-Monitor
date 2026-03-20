@@ -69,11 +69,9 @@ interface RequireAuthProps {
   pathname: string;
   /** Content to render when the user is authenticated. */
   children: React.ReactNode;
-  /** Optional override for the loading/unauthenticated fallback. */
-  fallback?: React.ReactNode;
 }
 
-export function RequireAuth({ pathname, children, fallback }: RequireAuthProps) {
+export function RequireAuth({ pathname, children }: RequireAuthProps) {
   // If we are on an OAuth callback path, render the handler BEFORE any
   // component that calls useUser() is ever mounted.  This is the key fix:
   // RequireAuthWithStack (which subscribes to the auth context via useUser())
@@ -83,7 +81,7 @@ export function RequireAuth({ pathname, children, fallback }: RequireAuthProps) 
     return <OAuthCallbackHandler />;
   }
 
-  return <RequireAuthWithStack fallback={fallback}>{children}</RequireAuthWithStack>;
+  return <RequireAuthWithStack>{children}</RequireAuthWithStack>;
 }
 
 // ---------------------------------------------------------------------------
@@ -95,10 +93,9 @@ export function RequireAuth({ pathname, children, fallback }: RequireAuthProps) 
 
 interface RequireAuthWithStackProps {
   children: React.ReactNode;
-  fallback?: React.ReactNode;
 }
 
-function RequireAuthWithStack({ children, fallback }: RequireAuthWithStackProps) {
+function RequireAuthWithStack({ children }: RequireAuthWithStackProps) {
   // Replace this import with the actual auth hook when Stack Auth (or another
   // provider) is wired up.  The critical invariant is that this component is
   // never rendered during an OAuth callback, which is enforced by RequireAuth.

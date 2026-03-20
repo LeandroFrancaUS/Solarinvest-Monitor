@@ -21,7 +21,7 @@ interface AppRoutesProps {
  * which prevents the entire component tree from triggering cascading
  * re-renders (React error #426) during the logout transition.
  */
-function AppRoutes({ user, onLogout }: AppRoutesProps) {
+function AppRoutes({ onLogout }: AppRoutesProps) {
   return (
     <div>
       {/* Replace with actual application routing/shell */}
@@ -87,7 +87,7 @@ export default function App({ user }: AppProps) {
       // Even on error we stay in "logged out" state — reset to let the
       // auth provider redirect to the login page.
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // empty deps: intentional — reads latest values via refs
 
   // Render a minimal screen while the logout is in progress.
   // <AppRoutes> is NOT rendered, so none of its children can trigger
