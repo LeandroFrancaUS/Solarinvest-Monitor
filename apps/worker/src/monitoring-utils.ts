@@ -163,7 +163,7 @@ async function createOrUpdateLowGenAlert(
   const existing = await prisma.alert.findFirst({
     where: {
       plant_id: plantId,
-      type: 'LOW_GENERATION',
+      type: 'LOW_GEN',
       state: { in: ['NEW', 'ACKED'] },
     },
   });
@@ -176,19 +176,17 @@ async function createOrUpdateLowGenAlert(
       data: {
         severity,
         message,
-        last_seen_at: new Date(),
       },
     });
   } else {
     await prisma.alert.create({
       data: {
         plant_id: plantId,
-        type: 'LOW_GENERATION',
+        type: 'LOW_GEN',
         severity,
         state: 'NEW',
         message,
         occurred_at: new Date(),
-        last_seen_at: new Date(),
       },
     });
     console.log(`[LowGen] Created low generation alert for plant ${plantId}`);
@@ -199,7 +197,7 @@ async function resolveLowGenAlert(plantId: string): Promise<void> {
   const existing = await prisma.alert.findFirst({
     where: {
       plant_id: plantId,
-      type: 'LOW_GENERATION',
+      type: 'LOW_GEN',
       state: { in: ['NEW', 'ACKED'] },
     },
   });
@@ -243,7 +241,6 @@ export async function checkOffline(plantId: string, lastSeenAt: Date): Promise<v
           where: { id: existing.id },
           data: {
             message,
-            last_seen_at: new Date(),
           },
         });
       } else {
@@ -255,7 +252,6 @@ export async function checkOffline(plantId: string, lastSeenAt: Date): Promise<v
             state: 'NEW',
             message,
             occurred_at: new Date(),
-            last_seen_at: new Date(),
           },
         });
         console.log(`[Offline] Created offline alert for plant ${plantId}`);

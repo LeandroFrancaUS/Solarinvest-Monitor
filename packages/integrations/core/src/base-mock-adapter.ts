@@ -10,7 +10,7 @@ import {
   VendorCapabilities,
   AdapterError,
   AdapterErrorType,
-} from '@solarinvest/integrations-core';
+} from './contracts';
 import * as fs from 'fs';
 import * as path from 'path';
 

@@ -1,8 +1,7 @@
 packages:
   - "apps/*"
   - "packages/*"
-  - apps/*
-  - packages/*
+  - "packages/integrations/*"
 
 ignoredBuiltDependencies:
   - bcrypt
